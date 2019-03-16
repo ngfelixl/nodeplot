@@ -26,7 +26,7 @@
     "prepare": "npm run clean && npm run prepare-copy-files && npm run test && npm run build ",
     "prepublishOnly": "npm test && npm run lint",
     "preversion": "npm run lint",
-    "precommit": "npm run format",
+    "precommit": "npm run format && npm run test",
     "build-copy-files": "node ./scripts/build.js",
     "prepare-copy-files": "node ./scripts/prepare.js"
   },
