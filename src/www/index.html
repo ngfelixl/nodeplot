@@ -2,15 +2,28 @@
 <html>
   <head>
     <base href="./">
-    <!--<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>-->
+    <title>Nodeplotlib Page {{pageid}}</title>
     <style>
       #container { display: flex; flex-wrap: wrap; }
       #container > * { flex: 1 1 1280px; }
       .plot-container.plotly, .svg-container { width: 100%; }
+      .toolbar { width: 100%; display: flex; justify-content: space-between;
+        padding: 24px; background-color: rgba(200, 200, 200, 1);
+        font-family: sans-serif, Arial, Helvetica; }
     </style>
   </head>
   <body>
-    <div id="container" data-plotid="{{plotid}}"></div>
+    <div id="websocket-state" class="toolbar">
+      <span>Nodeplotlib</span>
+      <button id="close">Close Connection</button>
+    </div>
+
+    <div id="container" data-pageid={{pageid}}></div>
+
+    <div class="footer">
+      <span class="status"></span>
+    </div>
+
     <script type="text/javascript" src="plotly.min.js"></script>
   </body>
 </html>

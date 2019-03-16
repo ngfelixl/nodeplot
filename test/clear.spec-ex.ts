@@ -1,5 +1,6 @@
 import { clear, plots } from '../src/plot';
 
+
 describe('clear', () => {
   beforeEach(() => {
     plots.push('test' as any);

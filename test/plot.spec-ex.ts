@@ -1,6 +1,5 @@
-import { plot, Plot } from '../src/index';
+import { plot } from '../src/index';
 import { plots, stack } from '../src/plot';
-// import { Server } from '../src/server';
 jest.mock('../src/server');
 
 describe('plot', () => {
@@ -16,10 +15,6 @@ describe('plot', () => {
   it('should spawn the server if data is valid', () => {
     plot([{x: [1], y: [1], type: 'line' as any}]);
   });
-
-  /* it('should stack data and call "spawn" once when using with data', () => {
-    plot([], {});
-  }); */
 
   it('should clear the temporary plots array', () => {
     stack([{x: [1], y: [2], type: 'line' as any}]);

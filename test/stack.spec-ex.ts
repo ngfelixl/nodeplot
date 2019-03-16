@@ -1,6 +1,8 @@
 import { plots, stack } from '../src/plot';
 
+
 const validData = [{x: [1], y: [1]}];
+
 
 describe('stack', () => {
   beforeEach(() => {

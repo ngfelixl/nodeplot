@@ -1,12 +1,12 @@
-import { IPlot, IPlotsContainer } from './models/index';
+import { PlotData, PlotStates } from './models/index';
 import { Layout, Plot } from './models/index';
 import { Server } from './server';
-
+import { of, Observable } from 'rxjs';
 
 const server = new Server(8080);
 
-export let plots: IPlot[] = [];
-export const plotContainer: IPlotsContainer = {};
+export let plots: PlotData[] = [];
+export const plotStates: PlotStates = {};
 
 /**
  * Clears all stacked plots.
@@ -16,40 +16,45 @@ export function clear(): void {
 }
 
 /**
- * Stacks plot data to a stack. When executing `plot`
- * the stack will also be plotted.
+ * Add plot data to a stack. When executing `plot`
+ * the stack will be plottet in addition to the given
+ * parameters to a single page.
  * @param data
  * @param layout
  */
-export function stack(data: Plot[], layout?: Layout): void {
-  validate(data, layout);
+export function stack(data: Observable<Plot[]> | Plot[], layout?: Layout): void {
+  if (data instanceof Observable) {
+    const container: PlotData = layout ? { stream$: data, layout } : { stream$: data };
+  } else {
+    validate(data, layout);
 
-  const container: IPlot = layout ? { data, layout } : { data };
-  plots.push(container);
+    const container: PlotData = layout ? { stream$: of(data), layout } : { stream$: of(data) };
+    plots.push(container);
+  }
 }
 
 /**
- * Plots the registered plots to a browser.
- * @param data
+ * Plot the plot-stack to a webpage. Data arguments will
+ * be added to the stack before.
+ * @param data Stream or static plot data
  * @param layout
  * @param cb
  */
-export function plot(data?: Plot[] | null, layout?: Layout): void {
+export function plot(data?: Observable<Plot[]> | Plot[] | null, layout?: Layout): void {
   if (data) {
-    validate(data, layout);
     stack(data, layout);
   }
 
-  const id = Object.keys(plotContainer).length;
+  const id = Object.keys(plotStates).length;
 
-  plotContainer[id] = {
+  plotStates[id] = {
     opened: false,
     pending: false,
-    plots
+    plots,
   };
   plots = [];
 
-  server.spawn(plotContainer);
+  server.spawn(plotStates);
 }
 
 function validate(data: Plot[], layout?: Layout) {

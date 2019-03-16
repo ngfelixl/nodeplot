@@ -3,20 +3,23 @@ import { createServer, IncomingMessage, Server as HttpServer, ServerResponse } f
 import { Socket } from 'net';
 import opn from 'opn';
 import { join } from 'path';
-import { IPlotsContainer } from './models';
+import { PlotStates } from './models';
+import { WebsocketServer } from './websocket.server';
 
 export class Server {
-  private instance: HttpServer;
-  private plotsContainer: IPlotsContainer = {};
+  private httpServer: HttpServer;
+  private plotStates: PlotStates = {};
   private port: number;
-  private sockets: {[id: number]: Socket} = {};
+  private sockets: { [id: number]: Socket } = {};
   private nextSocketID = 0;
+  private websocketServer: WebsocketServer;
 
   constructor(port: number) {
     this.port = port;
-    this.instance = this.createServer();
+    this.httpServer = this.createServer();
+    this.websocketServer = new WebsocketServer(this.httpServer);
 
-    this.instance.on('connection', (socket: Socket) => {
+    this.httpServer.on('connection', (socket: Socket) => {
       const id = this.nextSocketID++;
       this.sockets[id] = socket;
 
@@ -31,11 +34,12 @@ export class Server {
    * and opens a new browser window targetting the webservers
    * data address.
    */
-  public spawn(plotsContainer: IPlotsContainer) {
-    this.plotsContainer = plotsContainer;
+  public spawn(plotStates: PlotStates) {
+    this.plotStates = plotStates;
 
-    if (!this.instance.address()) {
-      this.instance.listen(this.port);
+    if (!this.httpServer.address()) {
+      this.httpServer.listen(this.port);
+      this.websocketServer.configure(plotStates);
     }
 
     this.openBrowserWindow();
@@ -46,15 +50,15 @@ export class Server {
    * and clears the plots container.
    */
   public clean() {
-    if (this.instance.address()) {
-      this.instance.close();
+    if (this.httpServer.address()) {
+      this.httpServer.close();
     }
 
     for (const socket of Object.values(this.sockets)) {
       socket.destroy();
     }
 
-    this.plotsContainer = {};
+    this.plotStates = {};
   }
 
   /**
@@ -63,7 +67,7 @@ export class Server {
    * does not have got its data yet.
    */
   private openBrowserWindow() {
-    for (const plotEntry of Object.entries(this.plotsContainer)) {
+    for (const plotEntry of Object.entries(this.plotStates)) {
       if (!plotEntry[1].opened && !plotEntry[1].pending) {
         plotEntry[1].pending = true;
         opn(`http://localhost:${this.port}/plots/${plotEntry[0]}/index.html`);
@@ -84,19 +88,19 @@ export class Server {
   /**
    * Serves the plot data at /data/:id of the container[id].
    * It markes the container as opened and not pending anymore.
-   * @param req 
-   * @param res 
+   * @param req
+   * @param res
    */
   private serveData(req: IncomingMessage, res: ServerResponse) {
     if (req && req.url && req.url.match(/data\/[0-9]+/)) {
       const segments = req.url.split('/');
       const id = +segments[segments.length - 1];
-      
-      const container = this.plotsContainer[id];
+
+      const container = this.plotStates[id];
       const temporaryPlots = container && container.plots;
 
-      this.plotsContainer[id].opened = true;
-      this.plotsContainer[id].pending = false;
+      this.plotStates[id].opened = true;
+      this.plotStates[id].pending = false;
 
       res.end(JSON.stringify(temporaryPlots));
       this.close();
@@ -105,8 +109,8 @@ export class Server {
 
   /**
    * Serves the website at http://localhost:PORT/plots/:id/index.html
-   * @param req 
-   * @param res 
+   * @param req
+   * @param res
    */
   private serveWebsite(req: IncomingMessage, res: ServerResponse) {
     if (req && req.url && req.url.match(/plots\/[0-9]+\/index.html/)) {
@@ -119,11 +123,11 @@ export class Server {
           res.end(JSON.stringify(error));
           return;
         }
-        file = file.replace('{{plotid}}', id);
+        file = file.replace(/{{pageid}}/g, id);
         res.writeHead(200);
         res.end(file);
       });
-    } else if (req && req.url && (req.url.match(/nodeplotlib.min.js/) || req.url && req.url.match(/plotly.min.js/))) {
+    } else if (req && req.url && (req.url.match(/nodeplotlib.min.js/) || (req.url && req.url.match(/plotly.min.js/)))) {
       const segments = req.url.split('/');
       const script = segments[segments.length - 1];
 
@@ -135,7 +139,7 @@ export class Server {
         }
 
         if (script === 'nodeplotlib.min.js') {
-          file = file.replace('{{port}}', `${this.port}`);
+          file = file.replace(/{{port}}/g, `${this.port}`);
         }
         res.setHeader('content-type', 'text/javascript');
         res.writeHead(200);
@@ -153,12 +157,10 @@ export class Server {
    * and all plots were opened
    */
   private close() {
-    const pending = Object.values(this.plotsContainer)
-      .reduce((a, b) => a || b.pending, false);
-    const opened = Object.values(this.plotsContainer)
-      .reduce((a, b) => a && b.opened, true);
+    const pending = Object.values(this.plotStates).reduce((a, b) => a || b.pending, false);
+    const opened = Object.values(this.plotStates).reduce((a, b) => a && b.opened, true);
 
-    if (this.instance && !pending && opened) {
+    if (this.httpServer && !pending && opened) {
       this.clean();
     }
   }

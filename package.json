@@ -26,7 +26,7 @@
     "prepare": "npm run clean && npm run prepare-copy-files && npm run test && npm run build ",
     "prepublishOnly": "npm test && npm run lint",
     "preversion": "npm run lint",
-    "precommit": "npm run format && npm run test",
+    "precommit": "npm run format",
     "build-copy-files": "node ./scripts/build.js",
     "prepare-copy-files": "node ./scripts/prepare.js"
   },
@@ -43,7 +43,9 @@
   "author": "Felix Lemke <flemke.dev@gmail.com> (https://felixlemke.com)",
   "license": "MIT",
   "dependencies": {
-    "opn": "^5.3.0"
+    "opn": "^5.3.0",
+    "rxjs": "^6.4.0",
+    "ws": "^6.2.0"
   },
   "devDependencies": {
     "@types/d3": "^5.7.1",
@@ -52,6 +54,7 @@
     "@types/opn": "^5.1.0",
     "@types/plotly.js": "^1.43.1",
     "@types/request": "^2.48.1",
+    "@types/ws": "^6.0.1",
     "copyfiles": "^2.1.0",
     "coveralls": "^3.0.2",
     "dts-bundle": "^0.7.3",
